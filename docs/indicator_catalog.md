@@ -18,3 +18,5 @@
   - Methodology: (TBD)
 
 Seeded Transport indicators: T1_EXPOSURE_FLOODPRONE_KM, T2_VULN_CENTRAL_EDGES_SHARE, T3_RECOVERY_HEADWAY_GAP.
+
+T1 (2024, Attica): prox to waterways within 200 m; value_raw=% road-km in buffer; value_norm=share (0–1).
