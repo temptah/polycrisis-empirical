@@ -1,6 +1,4 @@
 ﻿import os
-from math import isfinite
-from statistics import quantiles
 import numpy as np
 import pandas as pd
 import sqlalchemy as sa
@@ -25,10 +23,10 @@ TIME_START = "2024-01-01"
 TIME_END   = "2024-12-31"
 REGION_ISO = "EL30"
 IND_CODE   = "T2_VULN_CENTRAL_EDGES_SHARE"
-SOURCE_STR = "OSM roads (major classes) in Attica; NetworkX edge betweenness (k-sampled); rounded nodes @1e-5 deg"
+SOURCE_STR = "OSM roads (major classes) in Attica; NetworkX edge betweenness (k-sampled); ST_Dump(LineMerge); nodes rounded @1e-5 deg"
 
 def node_key(x, y, ndp=5):
-    # Round coordinates to a small grid so identical junctions snap to same node
+    # Round coordinates so identical junctions snap to same node
     return (round(float(x), ndp), round(float(y), ndp))
 
 def main():
@@ -52,25 +50,29 @@ def main():
             "SELECT indicator_id FROM meta.indicator WHERE indicator_code = %s;", (IND_CODE,)
         ).scalar_one()
 
-        # Pull major roads; create endpoints in SQL for speed
-        df = pd.read_sql(
-            sa.text(f"""
-                SELECT
-                  row_number() OVER () AS edge_id,
-                  highway,
-                  ST_X(ST_StartPoint(geom)) AS x1,
-                  ST_Y(ST_StartPoint(geom)) AS y1,
-                  ST_X(ST_EndPoint(geom))   AS x2,
-                  ST_Y(ST_EndPoint(geom))   AS y2
-                FROM raw.osm_roads
-                WHERE highway = ANY(:major)
-            """),
-            con,
-            params={"major": list(MAJOR_HIGHWAYS)}
-        )
+        # Pull major roads; normalize to single LineStrings and filter valid lines (>= 2 points)
+        roads_sql = sa.text("""
+            WITH ln AS (
+              SELECT highway, (ST_Dump(ST_LineMerge(geom))).geom AS geom
+              FROM raw.osm_roads
+              WHERE highway = ANY(:major) AND NOT ST_IsEmpty(geom)
+            )
+            SELECT
+              row_number() OVER () AS edge_id,
+              highway,
+              ST_X(ST_StartPoint(geom)) AS x1,
+              ST_Y(ST_StartPoint(geom)) AS y1,
+              ST_X(ST_EndPoint(geom))   AS x2,
+              ST_Y(ST_EndPoint(geom))   AS y2
+            FROM ln
+            WHERE ST_NPoints(geom) >= 2;
+        """)
+        df = pd.read_sql(roads_sql, con, params={"major": list(MAJOR_HIGHWAYS)})
 
+    # Drop any residual NULLs just in case
+    df = df.dropna(subset=["x1","y1","x2","y2"])
     if df.empty:
-        raise SystemExit("No major road edges found in raw.osm_roads — check import/filters.")
+        raise SystemExit("No usable major road edges found after cleaning—check import/filters.")
 
     # Build an undirected graph with rounded endpoints
     G = nx.Graph()
@@ -82,13 +84,11 @@ def main():
             edges.append((u, v))
     G.add_edges_from(edges)
 
-    # Keep it tractable: sample k nodes for approximate centrality
-    # Choose k relative to graph size (up to 1500)
+    # Approximate edge betweenness via node sampling
     k = min(1500, max(200, int(0.02 * G.number_of_nodes())))
     ec = nx.edge_betweenness_centrality(G, k=k, seed=42)
     vals = np.fromiter(ec.values(), dtype=float)
     vals = vals[np.isfinite(vals)]
-
     if vals.size == 0:
         raise SystemExit("Centrality returned no values—graph may be empty after filtering.")
 
@@ -99,7 +99,7 @@ def main():
     print(f"Edge betweenness p90: {p90:.6g}")
     print(f"T2 share >= p90: {share:.3f}%")
 
-    # Write to DB (raw value; value_norm is NULL for now)
+    # Upsert into DB (raw value; value_norm stays NULL for now)
     with eng.begin() as con:
         con.exec_driver_sql(
             """
