@@ -11,3 +11,5 @@ Conventions:
 - Normalization: min-max to 0..1; direction 'UP_IS_BAD' or 'DOWN_IS_BAD'
 
 Region in DB: Attica (EL30, NUTS-2) from GISCO NUTS 2021 GeoJSON (EPSG:4326).
+
+raw.osm_roads: OSM (Geofabrik Greece PBF), clipped to Attica (EL30) via ogr2ogr; SRID=4326.
