@@ -13,3 +13,24 @@ data/
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Keep venv ignored but track requirement files
+!env/requirements.txt
+!env/requirements.lock.txt
+
+
+# Ignore everything under env by default
+env/**
+
+# Unignore the env folder itself so we can re-include specific files
+!env/
+
+# Re-include the requirements files
+!env/requirements.txt
+!env/requirements.lock.txt
+
+# Ignore the virtual environment itself
+env/.venv/**
+
+# Keep the root .env out of git
+.env
