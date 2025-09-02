@@ -1,0 +1,15 @@
+﻿# Python
+__pycache__/
+*.pyc
+.env
+env/
+.venv/
+.ipynb_checkpoints/
+# Data & models
+data/
+*.gpkg
+*.geojson
+*.sqlite
+# OS junk
+.DS_Store
+Thumbs.db

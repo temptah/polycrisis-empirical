@@ -1,0 +1,12 @@
+﻿services:
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: poly_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./initdb:/docker-entrypoint-initdb.d
