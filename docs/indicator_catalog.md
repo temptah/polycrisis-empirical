@@ -16,3 +16,5 @@
   - Unit: minutes (or %)
   - Source: (TBD)
   - Methodology: (TBD)
+
+Seeded Transport indicators: T1_EXPOSURE_FLOODPRONE_KM, T2_VULN_CENTRAL_EDGES_SHARE, T3_RECOVERY_HEADWAY_GAP.

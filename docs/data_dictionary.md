@@ -9,3 +9,5 @@
 Conventions:
 - Time windows: [time_start, time_end]
 - Normalization: min-max to 0..1; direction 'UP_IS_BAD' or 'DOWN_IS_BAD'
+
+Region in DB: Attica (EL30, NUTS-2) from GISCO NUTS 2021 GeoJSON (EPSG:4326).
