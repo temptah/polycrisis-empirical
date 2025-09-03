@@ -13,3 +13,5 @@ Conventions:
 Region in DB: Attica (EL30, NUTS-2) from GISCO NUTS 2021 GeoJSON (EPSG:4326).
 
 raw.osm_roads: OSM (Geofabrik Greece PBF), clipped to Attica (EL30) via ogr2ogr; SRID=4326.
+
+raw.impact (ERA5): heatwave metrics added via cdsapi (tmax_mean_c, tmax_area_max_c, days_* thresholds).
