@@ -53,7 +53,7 @@ def read_member(zf: zipfile.ZipFile, member: str, dtypes: dict | None):
     for enc in ("utf-8", "utf-8-sig", "cp1253"):
         try:
             with zf.open(member) as f:
-                return pd.read_csv(f, dtype=dtypes, low_memory=False, encoding=enc, engine="python", on_bad_lines="skip")
+                return pd.read_csv(f, dtype=dtypes, encoding=enc, engine="python", on_bad_lines="skip")
         except Exception as e:
             last_err = e
             continue
@@ -85,7 +85,7 @@ def load_zip(zip_path: str, suffix: str = ""):
             first = True
             total = 0
             with zf.open(member) as f:
-                for chunk in pd.read_csv(f, dtype=DTYPES["stop_times"], chunksize=250_000, low_memory=False, encoding="utf-8", engine="python", on_bad_lines="skip"):
+                for chunk in pd.read_csv(f, dtype=DTYPES["stop_times"], chunksize=250_000, encoding="utf-8", engine="python", on_bad_lines="skip"):
                     table = f"gtfs_stop_times{suffix}"
                     chunk.to_sql(table, eng, schema="raw",
                                  if_exists=("replace" if first else "append"),
