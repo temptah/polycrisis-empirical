@@ -34,3 +34,5 @@ env/.venv/**
 
 # Keep the root .env out of git
 .env
+
+!docs/*.geojson
