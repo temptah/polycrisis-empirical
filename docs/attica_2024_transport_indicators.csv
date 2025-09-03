@@ -1,0 +1,5 @@
+indicator_code,value_raw,value_norm,source
+T1_EXPOSURE_FLOODPRONE_KM,33.1627,0.331627,OSM proximity proxy: 200 m buffer of waterways; MAJOR roads only
+T2_VULN_CENTRAL_EDGES_SHARE,7.1243,0.071243,Length-weighted edge betweenness (major roads); value_raw=% of km >=p90
+T3_SCHED_MEDIAN_HEADWAY_MIN,7.9292,0.264306,"GTFS static (bus∪fixed). Headways per stop in 07:00–10:00 → route median → network median. Normalize min(h/30,1). Attica only."
+T3W_SCHED_MEDIAN_HEADWAY_MIN,20.0000,0.666667,GTFS static WEEKDAY (2024-11-20). Headways 07:00–10:00; per-stop → route median → network median. Attica; HH≥24; services filtered by calendar/calendar_dates.
