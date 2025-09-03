@@ -1,4 +1,4 @@
-import os, datetime as dt
+﻿import os, datetime as dt
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -9,7 +9,8 @@ from src.config import make_engine
 
 REGION_ISO = "EL30"
 EVENT_DATE = "2024-07-08"   # event start date we inserted
-START = dt.date(2024,7,8); END = dt.date(2024,7,23)
+START = dt.date(2024,7,8)
+END   = dt.date(2024,7,23)
 
 def get_area_from_db():
     eng = make_engine()
@@ -41,11 +42,41 @@ def download_nc(area, out_nc):
         out_nc,
     )
 
+def _find_time_dim(da: xr.DataArray) -> str:
+    # Prefer a dim containing "time"
+    candidates = [d for d in da.dims if "time" in d.lower()]
+    if candidates:
+        return candidates[0]
+    # Else, look for a coordinate with datetime dtype
+    for name, coord in da.coords.items():
+        try:
+            if np.issubdtype(coord.dtype, np.datetime64):
+                return name
+        except Exception:
+            pass
+    # As a last resort, if exactly one non-spatial dim exists, use it
+    non_spatial = [d for d in da.dims if d.lower() not in ("lat","latitude","lon","longitude","x","y")]
+    if non_spatial:
+        return non_spatial[0]
+    raise RuntimeError(f"No time-like coordinate found; dims={da.dims}, coords={list(da.coords)}")
+
 def process_and_insert(out_nc):
+    # Use the h5netcdf engine to avoid netCDF4/NumPy ABI issues
     ds = xr.open_dataset(out_nc, engine="h5netcdf")
-    t2m_c = ds["t2m"] - 273.15
-    daily_max = t2m_c.resample(time="1D").max()
-    area_mean = daily_max.mean(dim=("latitude","longitude"))
+
+    if "t2m" not in ds:
+        raise RuntimeError(f"'t2m' variable not found in dataset variables: {list(ds.data_vars)}")
+
+    t2m_c = ds["t2m"] - 273.15  # Kelvin -> Celsius
+
+    # Detect dimension/coordinate names robustly
+    tdim = _find_time_dim(t2m_c)
+    spatial_dims = [d for d in t2m_c.dims if d != tdim]
+
+    # Daily maxima then spatial mean
+    daily_max = t2m_c.resample({tdim: "1D"}).max()
+    area_mean = daily_max.mean(dim=spatial_dims)
+
     metrics = {
         "tmax_mean_c": float(area_mean.mean().values),
         "tmax_max_c":  float(area_mean.max().values),
@@ -62,17 +93,13 @@ def process_and_insert(out_nc):
               AND event_type='heatwave' AND DATE(t_start)=%s;
         """, (REGION_ISO, EVENT_DATE)).scalar_one()
 
-        # Upsert by deleting the metric if present, then inserting
+        # Upsert by deleting metric if present, then inserting
         for metric, value in metrics.items():
-            con.exec_driver_sql(
-                "DELETE FROM raw.impact WHERE event_id=%s AND metric=%s;",
-                (event_id, metric),
-            )
-            con.exec_driver_sql(
-                "INSERT INTO raw.impact (event_id, metric, value) VALUES (%s,%s,%s);",
-                (event_id, metric, float(value)),
-            )
+            con.exec_driver_sql("DELETE FROM raw.impact WHERE event_id=%s AND metric=%s;", (event_id, metric))
+            con.exec_driver_sql("INSERT INTO raw.impact (event_id, metric, value) VALUES (%s,%s,%s);",
+                                (event_id, metric, float(value)))
 
+    print("Detected dims:", t2m_c.dims, "| time dim:", tdim, "| spatial dims:", spatial_dims)
     print("Inserted metrics:", metrics)
 
 def main():
