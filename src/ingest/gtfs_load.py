@@ -1,4 +1,4 @@
-﻿import os, zipfile, argparse
+import os, zipfile, argparse
 import pandas as pd
 from dotenv import load_dotenv
 import sqlalchemy as sa
@@ -53,7 +53,7 @@ def read_member(zf: zipfile.ZipFile, member: str, dtypes: dict | None):
     for enc in ("utf-8", "utf-8-sig", "cp1253"):
         try:
             with zf.open(member) as f:
-                return pd.read_csv(f, dtype=dtypes, low_memory=False, encoding=enc)
+                return pd.read_csv(f, dtype=dtypes, low_memory=False, encoding=enc, engine="python", on_bad_lines="skip")
         except Exception as e:
             last_err = e
             continue
@@ -85,7 +85,7 @@ def load_zip(zip_path: str, suffix: str = ""):
             first = True
             total = 0
             with zf.open(member) as f:
-                for chunk in pd.read_csv(f, dtype=DTYPES["stop_times"], chunksize=250_000, low_memory=False, encoding="utf-8"):
+                for chunk in pd.read_csv(f, dtype=DTYPES["stop_times"], chunksize=250_000, low_memory=False, encoding="utf-8", engine="python", on_bad_lines="skip"):
                     table = f"gtfs_stop_times{suffix}"
                     chunk.to_sql(table, eng, schema="raw",
                                  if_exists=("replace" if first else "append"),
@@ -110,7 +110,7 @@ def load_zip(zip_path: str, suffix: str = ""):
             CREATE INDEX IF NOT EXISTS idx_gtfs_stop_times_trip{suffix} ON raw.gtfs_stop_times{suffix}(trip_id);
             CREATE INDEX IF NOT EXISTS idx_gtfs_stops_id{suffix}        ON raw.gtfs_stops{suffix}(stop_id);
         """)
-    print(f"GTFS load complete → {zip_path}  (suffix: '{suffix or ''}')")
+    print(f"GTFS load complete > {zip_path}  (suffix: '{suffix or ''}')")
 
 def main():
     ap = argparse.ArgumentParser(description="Load a GTFS zip into Postgres (raw schema) with optional suffix.")
