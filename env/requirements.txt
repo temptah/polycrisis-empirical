@@ -6,3 +6,6 @@ pandas==2.2.2
 cdsapi>=0.7.0
 xarray==2024.3.0
 netCDF4==1.6.5
+
+h5py>=3.14.0
+h5netcdf>=1.6.4
