@@ -1,7 +1,7 @@
 ﻿-- sql/export_event_transport_summary_fallback_only.sql
 SET statement_timeout = '10min';
 SET jit = off;
-SET work_mem = 262144;  -- = 256 MB in kB units; avoids the "256M" parsing issue
+SET work_mem = 262144;  -- 256 MB (kB units)
 
 COPY (
 WITH rgn AS (SELECT geom FROM meta.region WHERE iso_code = :'iso'),
@@ -124,5 +124,5 @@ SELECT * FROM (
   UNION ALL
   SELECT 'PM',           'T3W_MULTI_event',  (SELECT minutes FROM net_med_t3w_fb WHERE win='PM')
 ) y
-ORDER BY window, variant
+ORDER BY 1, 2  -- avoid reserved-word issues
 ) TO '/tmp/event_transport_summary.csv' WITH (FORMAT CSV, HEADER TRUE);
