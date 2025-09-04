@@ -21,15 +21,17 @@ stops_attica AS (
   FROM raw.gtfs_stops_geom_all s, rgn
   WHERE ST_Intersects(s.geom, rgn.geom)
 ),
+
 -- ----------- T3 (all services, AM/PM) -----------
 stop_arrivals_all AS (
   SELECT st.mode, t.route_id, st.stop_id,
-         CASE WHEN st.arrival_time ~ '^[0-9]{1,2}:[0-9]{2}:[0-9]{2}$'
-                 OR st.arrival_time ~ '^[0-9]{2,}:[0-9]{2}:[0-9]{2}$'
-              THEN (split_part(st.arrival_time,':',1)::int*3600
-                  +  split_part(st.arrival_time,':',2)::int*60
-                  +  split_part(st.arrival_time,':',3)::int)
-              ELSE NULL
+         CASE
+           WHEN st.arrival_time ~ '^[0-9]{1,2}:[0-9]{2}:[0-9]{2}$'
+            OR st.arrival_time ~ '^[0-9]{2,}:[0-9]{2}:[0-9]{2}$'
+           THEN (split_part(st.arrival_time,':',1)::int*3600
+               + split_part(st.arrival_time,':',2)::int*60
+               + split_part(st.arrival_time,':',3)::int)
+           ELSE NULL
          END AS sec
   FROM raw.gtfs_stop_times_all st
   JOIN raw.gtfs_trips_all t ON t.trip_id=st.trip_id AND t.mode=st.mode
@@ -54,18 +56,20 @@ route_med_all AS (
   GROUP BY win, mode, route_id
 ),
 net_med_all AS (
-  SELECT win, ROUND((percentile_cont(0.5) WITHIN GROUP (ORDER BY med_sec))/60.0, 2) AS minutes
+  SELECT win,
+         ROUND( ((percentile_cont(0.5) WITHIN GROUP (ORDER BY med_sec)) / 60.0)::numeric, 2 ) AS minutes
   FROM route_med_all
   GROUP BY win
 ),
--- ----------- T3W_MULTI within event days (Tue–Thu), AM/PM -----------
+
+-- ----------- T3W_MULTI within event Tue–Thu, AM/PM -----------
 base_bus AS (
   SELECT 'bus'::text AS mode, c.service_id::text AS service_id, dl.d
   FROM raw.gtfs_calendar_bus c JOIN daylist dl
     ON dl.d BETWEEN to_date(c.start_date,'YYYYMMDD') AND to_date(c.end_date,'YYYYMMDD')
-   AND ((dl.dow=1 AND c.monday=1) OR (dl.dow=2 AND c.tuesday=1) OR (dl.dow=3 AND c.wednesday=1)
-     OR (dl.dow=4 AND c.thursday=1) OR (dl.dow=5 AND c.friday=1) OR (dl.dow=6 AND c.saturday=1)
-     OR (dl.dow=0 AND c.sunday=1))
+   AND ( (dl.dow=1 AND c.monday=1) OR (dl.dow=2 AND c.tuesday=1) OR (dl.dow=3 AND c.wednesday=1)
+      OR (dl.dow=4 AND c.thursday=1) OR (dl.dow=5 AND c.friday=1) OR (dl.dow=6 AND c.saturday=1)
+      OR (dl.dow=0 AND c.sunday=1) )
 ),
 incl_bus AS (
   SELECT 'bus', cd.service_id::text, dl.d
@@ -95,12 +99,14 @@ services_fixed AS (SELECT DISTINCT * FROM incl_fixed EXCEPT SELECT * FROM excl_f
 services_on_date AS (SELECT * FROM services_bus UNION ALL SELECT * FROM services_fixed),
 arr_dates AS (
   SELECT sod.d, st.mode, tr.route_id, st.stop_id,
-         CASE WHEN st.arrival_time ~ '^[0-9]{1,2}:[0-9]{2}:[0-9]{2}$'
-                 OR st.arrival_time ~ '^[0-9]{2,}:[0-9]{2}:[0-9]{2}$'
-              THEN (split_part(st.arrival_time,':',1)::int*3600
-                  +  split_part(st.arrival_time,':',2)::int*60
-                  +  split_part(st.arrival_time,':',3)::int)
-              ELSE NULL END AS sec
+         CASE
+           WHEN st.arrival_time ~ '^[0-9]{1,2}:[0-9]{2}:[0-9]{2}$'
+            OR st.arrival_time ~ '^[0-9]{2,}:[0-9]{2}:[0-9]{2}$'
+           THEN (split_part(st.arrival_time,':',1)::int*3600
+               + split_part(st.arrival_time,':',2)::int*60
+               + split_part(st.arrival_time,':',3)::int)
+           ELSE NULL
+         END AS sec
   FROM services_on_date sod
   JOIN raw.gtfs_trips_all tr ON tr.service_id=sod.service_id AND tr.mode=sod.mode
   JOIN raw.gtfs_stop_times_all st ON st.trip_id=tr.trip_id AND st.mode=tr.mode
@@ -126,15 +132,17 @@ route_med_dates AS (
   GROUP BY win, d, mode, route_id
 ),
 day_med AS (
-  SELECT win, d,
-         percentile_cont(0.5) WITHIN GROUP (ORDER BY med_sec) AS day_med_sec
+  SELECT win, d, percentile_cont(0.5) WITHIN GROUP (ORDER BY med_sec) AS day_med_sec
   FROM route_med_dates
   GROUP BY win, d
 ),
 net_med_t3w AS (
-  SELECT win, ROUND((percentile_cont(0.5) WITHIN GROUP (ORDER BY day_med_sec))/60.0, 2) AS minutes
-  FROM day_med GROUP BY win
+  SELECT win,
+         ROUND( ((percentile_cont(0.5) WITHIN GROUP (ORDER BY day_med_sec)) / 60.0)::numeric, 2 ) AS minutes
+  FROM day_med
+  GROUP BY win
 )
+
 SELECT 'AM' AS window, 'T3_all' AS variant, (SELECT minutes FROM net_med_all WHERE win='AM') AS minutes
 UNION ALL
 SELECT 'PM', 'T3_all', (SELECT minutes FROM net_med_all WHERE win='PM')
