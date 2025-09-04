@@ -1,4 +1,5 @@
 ﻿import pandas as pd
+from pathlib import Path
 
 t3  = pd.read_csv("docs/t3_route_medians_16_19.csv")
 t3w = pd.read_csv("docs/t3w_multi_route_medians_16_19.csv")
@@ -10,6 +11,7 @@ df = (t3.merge(t3w, on=["mode","route_id"], how="inner")
         .assign(delta_min=lambda d: d["med_T3W_MULTI_eve"] - d["med_T3_eve"])
         .sort_values(["mode","delta_min"], ascending=[True, False]))
 
+Path("docs").mkdir(exist_ok=True, parents=True)
 df.to_csv("docs/t3_vs_t3w_multi_route_deltas_16_19.csv", index=False)
 df.nlargest(30, "delta_min").to_csv("docs/t3_vs_t3w_multi_top_increases_16_19.csv", index=False)
 df.nsmallest(30, "delta_min").to_csv("docs/t3_vs_t3w_multi_top_decreases_16_19.csv", index=False)
