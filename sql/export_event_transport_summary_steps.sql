@@ -161,7 +161,7 @@ GROUP BY win;
 TABLE net_med_t3w_fb;
 
 \echo 'S5: Final export -> /tmp/event_transport_summary.csv'
-\copy (SELECT 'AM' AS window, 'T3_all' AS variant, (SELECT minutes FROM net_med_all WHERE win='AM') AS minutes UNION ALL SELECT 'PM','T3_all',(SELECT minutes FROM net_med_all WHERE win='PM') UNION ALL SELECT 'AM','T3W_MULTI_event',(SELECT minutes FROM net_med_t3w_fb WHERE win='AM') UNION ALL SELECT 'PM','T3W_MULTI_event',(SELECT minutes FROM net_med_t3w_fb WHERE win='PM') ORDER BY 1,2) TO '/tmp/event_transport_summary.csv' WITH (FORMAT CSV, HEADER TRUE);
+\copy (SELECT 'AM' AS window, 'T3_all' AS variant, (SELECT minutes FROM net_med_all WHERE win='AM') AS minutes UNION ALL SELECT 'PM','T3_all',(SELECT minutes FROM net_med_all WHERE win='PM') UNION ALL SELECT 'AM','T3W_MULTI_fallback',(SELECT minutes FROM net_med_t3w_fb WHERE win='AM') UNION ALL SELECT 'PM','T3W_MULTI_fallback',(SELECT minutes FROM net_med_t3w_fb WHERE win='PM') ORDER BY 1,2) TO '/tmp/event_transport_summary.csv' WITH (FORMAT CSV, HEADER TRUE);
 
 COMMIT;
 
