@@ -1,19 +1,26 @@
-﻿WITH e AS (
-  INSERT INTO raw.event (region_id, event_type, t_start, t_end, description)
-  SELECT region_id,
-         'heatwave',
-         TIMESTAMP '2024-07-08 00:00:00',
-         TIMESTAMP '2024-07-23 23:59:59',
-         'Athens/Attica heatwave ~16 days (Jul 8–23, 2024). Placeholder impact=hazard_days.'
-  FROM meta.region
-  WHERE iso_code = 'EL30'
-  RETURNING event_id
-)
-INSERT INTO raw.impact (event_id, metric, value)
-SELECT event_id, 'hazard_days', 16 FROM e;
+﻿CREATE TABLE IF NOT EXISTS feat.event_window (
+  event_code text NOT NULL,
+  region_id integer NOT NULL,
+  hazard text NOT NULL,
+  time_start date NOT NULL,
+  time_end date NOT NULL,
+  description text,
+  source text,
+  PRIMARY KEY (event_code, region_id, time_start, time_end)
+);
 
--- Verify
-SELECT e.event_id, e.event_type, e.t_start, e.t_end, i.metric, i.value
-FROM raw.event e
-LEFT JOIN raw.impact i USING (event_id)
-WHERE e.event_type='heatwave' AND e.t_start::date='2024-07-08';
+WITH ids AS (
+  SELECT (SELECT region_id FROM meta.region WHERE iso_code='EL30') AS region_id
+)
+INSERT INTO feat.event_window (event_code, region_id, hazard, time_start, time_end, description, source)
+VALUES (
+  'HEATWAVE_2024',
+  (SELECT region_id FROM ids),
+  'heatwave',
+  DATE '2024-06-11',
+  DATE '2024-06-15',
+  'Placeholder heatwave window for Attica; to be validated against ERA5 temperatures and EuroMOMO.',
+  'Draft seed; will update after ERA5/EuroMOMO validation.'
+)
+ON CONFLICT (event_code, region_id, time_start, time_end)
+DO UPDATE SET description=EXCLUDED.description, source=EXCLUDED.source;
