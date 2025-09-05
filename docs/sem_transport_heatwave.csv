@@ -1,0 +1,5 @@
+event_code,system,window,variant,metric,minutes,unit,method
+HEATWAVE_2024,transport,AM,T3_all,network_median_headway_min,7.93,min,GTFS schedule median-of-medians; windows=07–10/16–19; Attica stops (EL30)
+HEATWAVE_2024,transport,AM,T3W_MULTI_fallback,network_median_headway_min,20.00,min,"GTFS schedule median-of-medians; Tue–Thu fallback (Nov 19–28, 2024); Attica stops (EL30)"
+HEATWAVE_2024,transport,PM,T3_all,network_median_headway_min,7.78,min,GTFS schedule median-of-medians; windows=07–10/16–19; Attica stops (EL30)
+HEATWAVE_2024,transport,PM,T3W_MULTI_fallback,network_median_headway_min,21.87,min,"GTFS schedule median-of-medians; Tue–Thu fallback (Nov 19–28, 2024); Attica stops (EL30)"
